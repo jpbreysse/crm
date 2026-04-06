@@ -1,6 +1,6 @@
 # Energy CRM
 
-**Version 0.1.0**
+**Version 0.2.0**
 
 A lightweight CRM application built for energy consulting firms. Designed to replace heavyweight solutions like Salesforce Sales Cloud with a focused, fast, and cost-effective tool for managing companies, contacts, and deals.
 
@@ -217,8 +217,8 @@ The database runs on **PostgreSQL 16** in a Docker container (`postgres-pgvector
 | `subject` | `varchar(255)` | NOT NULL | Activity subject line |
 | `notes` | `text` | nullable | Detailed notes |
 | `date` | `timestamp` | NOT NULL, default NOW | When the activity occurred |
-| `contact_id` | `uuid` | FK → contacts.id | Related contact |
-| `deal_id` | `uuid` | FK → deals.id | Related deal |
+| `contact_id` | `uuid` | NOT NULL, FK → contacts.id | Related contact (required — every activity is with a person) |
+| `deal_id` | `uuid` | FK → deals.id | Related deal (optional — not every interaction is about a deal) |
 | `user_id` | `uuid` | FK → users.id | User who logged it |
 | `created_at` | `timestamp` | NOT NULL, default NOW | Record creation time |
 
@@ -333,6 +333,91 @@ Returns all deals with associated company and contact names. Also returns compan
 
 ---
 
+### Activities
+
+**Route**: `/activities`
+
+#### `load()` — List Activities
+
+Returns all activities with associated contact, deal, and company names. Also returns contacts and deals lists for the create form dropdowns.
+
+| Return Field | Type | Description |
+|-------------|------|-------------|
+| `activities` | `array` | All activities with `contactFirstName`, `contactLastName`, `dealTitle`, `companyName` |
+| `contacts` | `array` | All contacts (`id`, `firstName`, `lastName`) for dropdown |
+| `deals` | `array` | All deals (`id`, `title`) for dropdown |
+
+#### `?/create` — Create Activity (Form Action)
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `type` | `activity_type` | No | Activity type (defaults to `note`) |
+| `subject` | `string` | Yes | Activity subject line |
+| `notes` | `string` | No | Detailed notes |
+| `date` | `datetime` | No | When the activity occurred (defaults to now) |
+| `contactId` | `uuid` | Yes | Related contact |
+| `dealId` | `uuid` | No | Related deal |
+
+**Error Response**: `{ error: 'Subject and contact are required' }` (400)
+
+---
+
+### Deal Detail
+
+**Route**: `/deals/[id]`
+
+#### `load()` — Get Deal with Activities
+
+Returns the deal with its associated company and contact, plus all activities linked to this deal.
+
+| Return Field | Type | Description |
+|-------------|------|-------------|
+| `deal` | `object` | Deal with `companyName`, `contactFirstName`, `contactLastName` |
+| `activities` | `array` | Activities for this deal with contact names |
+| `contacts` | `array` | All contacts for the activity form dropdown |
+
+#### `?/createActivity` — Log Activity on Deal (Form Action)
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `type` | `activity_type` | No | Activity type (defaults to `note`) |
+| `subject` | `string` | Yes | Activity subject line |
+| `notes` | `string` | No | Detailed notes |
+| `date` | `datetime` | No | When the activity occurred |
+| `contactId` | `uuid` | Yes | Related contact |
+
+The `dealId` is automatically set from the route parameter.
+
+---
+
+### Contact Detail
+
+**Route**: `/contacts/[id]`
+
+#### `load()` — Get Contact with Activities
+
+Returns the contact with their company, plus all activities linked to this contact.
+
+| Return Field | Type | Description |
+|-------------|------|-------------|
+| `contact` | `object` | Contact with `companyName` |
+| `activities` | `array` | Activities for this contact with deal titles |
+| `deals` | `array` | All deals for the activity form dropdown |
+
+#### `?/createActivity` — Log Activity on Contact (Form Action)
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `type` | `activity_type` | No | Activity type (defaults to `note`) |
+| `subject` | `string` | Yes | Activity subject line |
+| `notes` | `string` | No | Detailed notes |
+| `date` | `datetime` | No | When the activity occurred |
+| `dealId` | `uuid` | No | Related deal |
+
+The `contactId` is automatically set from the route parameter.
+
+---
+
 ## Database Queries
 
 All queries are executed via Drizzle ORM. Below is a reference of the queries used across the application.
@@ -437,6 +522,49 @@ INSERT INTO deals (title, value, stage, expected_close_date, company_id, contact
 VALUES ($1, $2, $3, $4, $5, $6, $7);
 ```
 
+### Activities Queries
+
+**List all activities with contact, deal, and company**
+```sql
+SELECT a.id, a.type, a.subject, a.notes, a.date,
+       a.contact_id, a.deal_id,
+       c.first_name, c.last_name,
+       d.title AS deal_title, co.name AS company_name
+FROM activities a
+LEFT JOIN contacts c ON a.contact_id = c.id
+LEFT JOIN deals d ON a.deal_id = d.id
+LEFT JOIN companies co ON d.company_id = co.id
+ORDER BY a.date DESC;
+```
+
+**List activities for a deal**
+```sql
+SELECT a.id, a.type, a.subject, a.notes, a.date,
+       a.contact_id, a.deal_id,
+       c.first_name, c.last_name
+FROM activities a
+LEFT JOIN contacts c ON a.contact_id = c.id
+WHERE a.deal_id = $1
+ORDER BY a.date DESC;
+```
+
+**List activities for a contact**
+```sql
+SELECT a.id, a.type, a.subject, a.notes, a.date,
+       a.contact_id, a.deal_id,
+       d.title AS deal_title
+FROM activities a
+LEFT JOIN deals d ON a.deal_id = d.id
+WHERE a.contact_id = $1
+ORDER BY a.date DESC;
+```
+
+**Create activity**
+```sql
+INSERT INTO activities (type, subject, notes, date, contact_id, deal_id)
+VALUES ($1, $2, $3, $4, $5, $6);
+```
+
 ---
 
 ## Getting Started
@@ -507,7 +635,8 @@ energy-crm/
 │   ├── lib/
 │   │   ├── utils.ts              # cn() utility for class merging
 │   │   ├── components/
-│   │   │   ├── app-sidebar.svelte  # Navigation sidebar
+│   │   │   ├── app-sidebar.svelte      # Navigation sidebar
+│   │   │   ├── activity-timeline.svelte # Reusable activity timeline
 │   │   │   └── ui/               # shadcn-svelte components
 │   │   │       ├── badge/
 │   │   │       ├── button/
@@ -525,26 +654,50 @@ energy-crm/
 │       ├── dashboard/
 │       │   ├── +page.server.ts   # Dashboard data loading
 │       │   └── +page.svelte      # Dashboard UI
+│       ├── activities/
+│       │   ├── +page.server.ts   # Activities CRUD
+│       │   └── +page.svelte      # Activities list with type filter
 │       ├── companies/
 │       │   ├── +page.server.ts   # Companies CRUD
 │       │   └── +page.svelte      # Companies list + create form
 │       ├── contacts/
 │       │   ├── +page.server.ts   # Contacts CRUD
-│       │   └── +page.svelte      # Contacts list + create form
+│       │   ├── +page.svelte      # Contacts list + create form
+│       │   └── [id]/
+│       │       ├── +page.server.ts  # Contact detail + activity actions
+│       │       └── +page.svelte     # Contact info + activity timeline
 │       └── deals/
 │           ├── +page.server.ts   # Deals CRUD
-│           └── +page.svelte      # Deals kanban + table + create form
+│           ├── +page.svelte      # Deals kanban + table + create form
+│           └── [id]/
+│               ├── +page.server.ts  # Deal detail + activity actions
+│               └── +page.svelte     # Deal info + activity timeline
 └── drizzle/                      # Generated migration files
 ```
 
 ---
 
-## Roadmap
+## Changelog
 
-### v0.2.0 (Planned)
+### v0.2.0 (Current)
+- Activity history with full CRUD (create, edit, delete)
+- Contact is required on all activities (every interaction is with a person)
+- Deal detail page (`/deals/[id]`) with info cards and activity timeline
+- Contact detail page (`/contacts/[id]`) with info cards and activity timeline
+- Reusable activity-timeline component shared across detail pages
+- Activities page (`/activities`) with type filter
+- Deal titles and contact names are clickable links to detail pages
 - Edit and delete for companies, contacts, and deals
-- Deal detail page with activity timeline
-- Log activities against deals and contacts
+- Deployed to Scalingo with Node adapter
+
+### v0.1.0
+- Initial release with companies, contacts, and deals management
+- Dashboard with stats and recent activity
+- Deal pipeline kanban board and table views
+- Drizzle ORM with PostgreSQL
+- shadcn-svelte UI components
+
+## Roadmap
 
 ### v0.3.0 (Planned)
 - Search and filtering on list pages
@@ -563,4 +716,4 @@ energy-crm/
 
 ---
 
-*Energy CRM v0.1.0 - Built with SvelteKit, Drizzle ORM, and PostgreSQL*
+*Energy CRM v0.2.0 - Built with SvelteKit, Drizzle ORM, and PostgreSQL*
