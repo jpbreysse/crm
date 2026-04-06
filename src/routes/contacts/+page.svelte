@@ -168,7 +168,7 @@
 					<tbody>
 						{#each data.contacts as contact}
 							<tr class="border-b last:border-0 hover:bg-muted/50">
-								<td class="p-4 font-medium">{contact.firstName} {contact.lastName}</td>
+								<td class="p-4 font-medium"><a href="/contacts/{contact.id}" class="hover:underline">{contact.firstName} {contact.lastName}</a></td>
 								<td class="p-4 text-sm text-muted-foreground">{contact.jobTitle ?? '-'}</td>
 								<td class="p-4 text-sm">{contact.companyName ?? '-'}</td>
 								<td class="p-4 text-sm text-muted-foreground">{contact.email ?? '-'}</td>

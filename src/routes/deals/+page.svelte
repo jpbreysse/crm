@@ -209,7 +209,7 @@
 							<div class="rounded-lg border {stageColors[stage]} p-4">
 								<div class="flex items-start justify-between">
 									<div>
-										<p class="font-medium">{deal.title}</p>
+										<a href="/deals/{deal.id}" class="font-medium hover:underline">{deal.title}</a>
 										<p class="text-sm text-muted-foreground">{deal.companyName ?? 'No company'}</p>
 									</div>
 									<div class="flex gap-1">
@@ -260,7 +260,7 @@
 						<tbody>
 							{#each data.deals as deal}
 								<tr class="border-b last:border-0 hover:bg-muted/50">
-									<td class="p-4 font-medium">{deal.title}</td>
+									<td class="p-4 font-medium"><a href="/deals/{deal.id}" class="hover:underline">{deal.title}</a></td>
 									<td class="p-4 text-sm">{deal.companyName ?? '-'}</td>
 									<td class="p-4 text-sm">{formatCurrency(deal.value)}</td>
 									<td class="p-4"><Badge variant="outline">{stageLabels[deal.stage]}</Badge></td>
