@@ -102,8 +102,8 @@
 						<Input id="subject" name="subject" required />
 					</div>
 					<div class="space-y-2">
-						<Label for="contactId">Contact</Label>
-						<select id="contactId" name="contactId" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+						<Label for="contactId">Contact *</Label>
+						<select id="contactId" name="contactId" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
 							<option value="">Select...</option>
 							{#each data.contacts as contact}
 								<option value={contact.id}>{contact.firstName} {contact.lastName}</option>
@@ -164,8 +164,8 @@
 							<Input id="edit-subject" name="subject" value={activity.subject} required />
 						</div>
 						<div class="space-y-2">
-							<Label for="edit-contactId">Contact</Label>
-							<select id="edit-contactId" name="contactId" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+							<Label for="edit-contactId">Contact *</Label>
+							<select id="edit-contactId" name="contactId" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
 								<option value="">Select...</option>
 								{#each data.contacts as contact}
 									<option value={contact.id} selected={activity.contactId === contact.id}>{contact.firstName} {contact.lastName}</option>

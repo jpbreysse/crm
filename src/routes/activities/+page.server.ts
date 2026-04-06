@@ -49,8 +49,8 @@ export const actions: Actions = {
 		const contactId = formData.get('contactId') as string;
 		const dealId = formData.get('dealId') as string;
 
-		if (!subject?.trim()) {
-			return fail(400, { error: 'Subject is required' });
+		if (!subject?.trim() || !contactId) {
+			return fail(400, { error: 'Subject and contact are required' });
 		}
 
 		await db.insert(activities).values({
@@ -58,7 +58,7 @@ export const actions: Actions = {
 			subject: subject.trim(),
 			notes: notes?.trim() || null,
 			date: date ? new Date(date) : new Date(),
-			contactId: contactId || null,
+			contactId,
 			dealId: dealId || null
 		});
 
@@ -75,8 +75,8 @@ export const actions: Actions = {
 		const contactId = formData.get('contactId') as string;
 		const dealId = formData.get('dealId') as string;
 
-		if (!id || !subject?.trim()) {
-			return fail(400, { error: 'Subject is required' });
+		if (!id || !subject?.trim() || !contactId) {
+			return fail(400, { error: 'Subject and contact are required' });
 		}
 
 		await db.update(activities).set({
@@ -84,7 +84,7 @@ export const actions: Actions = {
 			subject: subject.trim(),
 			notes: notes?.trim() || null,
 			date: date ? new Date(date) : new Date(),
-			contactId: contactId || null,
+			contactId,
 			dealId: dealId || null
 		}).where(eq(activities.id, id));
 

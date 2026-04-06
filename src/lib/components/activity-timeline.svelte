@@ -113,8 +113,8 @@
 					</div>
 					{#if showContactColumn && contacts.length > 0}
 						<div class="space-y-2">
-							<Label for="act-contactId">Contact</Label>
-							<select id="act-contactId" name="contactId" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+							<Label for="act-contactId">Contact *</Label>
+							<select id="act-contactId" name="contactId" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
 								<option value="">Select...</option>
 								{#each contacts as contact}
 									<option value={contact.id} selected={prefillContactId === contact.id}>{contact.firstName} {contact.lastName}</option>

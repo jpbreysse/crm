@@ -64,8 +64,8 @@ export const actions: Actions = {
 		const date = formData.get('date') as string;
 		const contactId = formData.get('contactId') as string;
 
-		if (!subject?.trim()) {
-			return fail(400, { error: 'Subject is required' });
+		if (!subject?.trim() || !contactId) {
+			return fail(400, { error: 'Subject and contact are required' });
 		}
 
 		await db.insert(activities).values({
@@ -73,7 +73,7 @@ export const actions: Actions = {
 			subject: subject.trim(),
 			notes: notes?.trim() || null,
 			date: date ? new Date(date) : new Date(),
-			contactId: contactId || null,
+			contactId,
 			dealId: params.id
 		});
 

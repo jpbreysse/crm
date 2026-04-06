@@ -81,7 +81,7 @@ export const activities = pgTable('activities', {
 	subject: varchar('subject', { length: 255 }).notNull(),
 	notes: text('notes'),
 	date: timestamp('date').defaultNow().notNull(),
-	contactId: uuid('contact_id').references(() => contacts.id),
+	contactId: uuid('contact_id').references(() => contacts.id).notNull(),
 	dealId: uuid('deal_id').references(() => deals.id),
 	userId: uuid('user_id').references(() => users.id),
 	createdAt: timestamp('created_at').defaultNow().notNull()
