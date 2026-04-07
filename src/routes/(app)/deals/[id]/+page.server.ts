@@ -1,10 +1,10 @@
 import { db } from '$lib/server/db';
 import { deals, companies, contacts, activities } from '$lib/server/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { error, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, locals }) => {
 	const [deal] = await db
 		.select({
 			id: deals.id,
@@ -15,6 +15,7 @@ export const load: PageServerLoad = async ({ params }) => {
 			description: deals.description,
 			companyId: deals.companyId,
 			contactId: deals.contactId,
+			ownerId: deals.ownerId,
 			companyName: companies.name,
 			contactFirstName: contacts.firstName,
 			contactLastName: contacts.lastName,
@@ -28,6 +29,11 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	if (!deal) {
 		throw error(404, 'Deal not found');
+	}
+
+	// Sales users can only see their own deals
+	if (locals.user?.role !== 'admin' && deal.ownerId && deal.ownerId !== locals.user?.id) {
+		throw error(403, 'Access denied');
 	}
 
 	const dealActivities = await db

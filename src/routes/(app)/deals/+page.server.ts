@@ -1,11 +1,13 @@
 import { db } from '$lib/server/db';
 import { deals, companies, contacts, users } from '$lib/server/db/schema';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, and } from 'drizzle-orm';
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 
-export const load: PageServerLoad = async () => {
-	const allDeals = await db
+export const load: PageServerLoad = async ({ locals }) => {
+	const isSales = locals.user?.role !== 'admin';
+
+	const query = db
 		.select({
 			id: deals.id,
 			title: deals.title,
@@ -22,8 +24,11 @@ export const load: PageServerLoad = async () => {
 		})
 		.from(deals)
 		.leftJoin(companies, eq(deals.companyId, companies.id))
-		.leftJoin(contacts, eq(deals.contactId, contacts.id))
-		.orderBy(desc(deals.createdAt));
+		.leftJoin(contacts, eq(deals.contactId, contacts.id));
+
+	const allDeals = isSales && locals.user
+		? await query.where(eq(deals.ownerId, locals.user.id)).orderBy(desc(deals.createdAt))
+		: await query.orderBy(desc(deals.createdAt));
 
 	const allCompanies = await db.select({ id: companies.id, name: companies.name }).from(companies).orderBy(companies.name);
 	const allContacts = await db
