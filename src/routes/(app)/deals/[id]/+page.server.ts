@@ -1,11 +1,36 @@
 import { db } from '$lib/server/db';
-import { activities, contacts, deals, companies } from '$lib/server/db/schema';
-import { desc, eq } from 'drizzle-orm';
-import { fail } from '@sveltejs/kit';
+import { deals, companies, contacts, activities } from '$lib/server/db/schema';
+import { eq, desc } from 'drizzle-orm';
+import { error, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 
-export const load: PageServerLoad = async () => {
-	const allActivities = await db
+export const load: PageServerLoad = async ({ params }) => {
+	const [deal] = await db
+		.select({
+			id: deals.id,
+			title: deals.title,
+			value: deals.value,
+			stage: deals.stage,
+			expectedCloseDate: deals.expectedCloseDate,
+			description: deals.description,
+			companyId: deals.companyId,
+			contactId: deals.contactId,
+			companyName: companies.name,
+			contactFirstName: contacts.firstName,
+			contactLastName: contacts.lastName,
+			createdAt: deals.createdAt,
+			updatedAt: deals.updatedAt
+		})
+		.from(deals)
+		.leftJoin(companies, eq(deals.companyId, companies.id))
+		.leftJoin(contacts, eq(deals.contactId, contacts.id))
+		.where(eq(deals.id, params.id));
+
+	if (!deal) {
+		throw error(404, 'Deal not found');
+	}
+
+	const dealActivities = await db
 		.select({
 			id: activities.id,
 			type: activities.type,
@@ -15,15 +40,11 @@ export const load: PageServerLoad = async () => {
 			contactId: activities.contactId,
 			dealId: activities.dealId,
 			contactFirstName: contacts.firstName,
-			contactLastName: contacts.lastName,
-			dealTitle: deals.title,
-			companyName: companies.name,
-			createdAt: activities.createdAt
+			contactLastName: contacts.lastName
 		})
 		.from(activities)
 		.leftJoin(contacts, eq(activities.contactId, contacts.id))
-		.leftJoin(deals, eq(activities.dealId, deals.id))
-		.leftJoin(companies, eq(deals.companyId, companies.id))
+		.where(eq(activities.dealId, params.id))
 		.orderBy(desc(activities.date));
 
 	const allContacts = await db
@@ -31,23 +52,17 @@ export const load: PageServerLoad = async () => {
 		.from(contacts)
 		.orderBy(contacts.lastName);
 
-	const allDeals = await db
-		.select({ id: deals.id, title: deals.title })
-		.from(deals)
-		.orderBy(deals.title);
-
-	return { activities: allActivities, contacts: allContacts, deals: allDeals };
+	return { deal, activities: dealActivities, contacts: allContacts };
 };
 
 export const actions: Actions = {
-	create: async ({ request }) => {
+	createActivity: async ({ request, params, locals }) => {
 		const formData = await request.formData();
 		const type = formData.get('type') as any;
 		const subject = formData.get('subject') as string;
 		const notes = formData.get('notes') as string;
 		const date = formData.get('date') as string;
 		const contactId = formData.get('contactId') as string;
-		const dealId = formData.get('dealId') as string;
 
 		if (!subject?.trim() || !contactId) {
 			return fail(400, { error: 'Subject and contact are required' });
@@ -59,45 +74,40 @@ export const actions: Actions = {
 			notes: notes?.trim() || null,
 			date: date ? new Date(date) : new Date(),
 			contactId,
-			dealId: dealId || null
+			dealId: params.id,
+			userId: locals.user?.id ?? null
 		});
 
 		return { success: true };
 	},
 
-	update: async ({ request }) => {
+	updateActivity: async ({ request }) => {
 		const formData = await request.formData();
 		const id = formData.get('id') as string;
 		const type = formData.get('type') as any;
 		const subject = formData.get('subject') as string;
 		const notes = formData.get('notes') as string;
 		const date = formData.get('date') as string;
-		const contactId = formData.get('contactId') as string;
-		const dealId = formData.get('dealId') as string;
 
-		if (!id || !subject?.trim() || !contactId) {
-			return fail(400, { error: 'Subject and contact are required' });
+		if (!id || !subject?.trim()) {
+			return fail(400, { error: 'Subject is required' });
 		}
 
 		await db.update(activities).set({
 			type: type || 'note',
 			subject: subject.trim(),
 			notes: notes?.trim() || null,
-			date: date ? new Date(date) : new Date(),
-			contactId,
-			dealId: dealId || null
+			date: date ? new Date(date) : new Date()
 		}).where(eq(activities.id, id));
 
 		return { success: true };
 	},
 
-	delete: async ({ request }) => {
+	deleteActivity: async ({ request }) => {
 		const formData = await request.formData();
 		const id = formData.get('id') as string;
 
-		if (!id) {
-			return fail(400, { error: 'Activity ID is required' });
-		}
+		if (!id) return fail(400, { error: 'Activity ID is required' });
 
 		await db.delete(activities).where(eq(activities.id, id));
 

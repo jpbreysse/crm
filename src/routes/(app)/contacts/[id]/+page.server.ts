@@ -1,36 +1,32 @@
 import { db } from '$lib/server/db';
-import { deals, companies, contacts, activities } from '$lib/server/db/schema';
+import { contacts, companies, activities, deals } from '$lib/server/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { error, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ params }) => {
-	const [deal] = await db
+	const [contact] = await db
 		.select({
-			id: deals.id,
-			title: deals.title,
-			value: deals.value,
-			stage: deals.stage,
-			expectedCloseDate: deals.expectedCloseDate,
-			description: deals.description,
-			companyId: deals.companyId,
-			contactId: deals.contactId,
+			id: contacts.id,
+			firstName: contacts.firstName,
+			lastName: contacts.lastName,
+			email: contacts.email,
+			phone: contacts.phone,
+			jobTitle: contacts.jobTitle,
+			companyId: contacts.companyId,
 			companyName: companies.name,
-			contactFirstName: contacts.firstName,
-			contactLastName: contacts.lastName,
-			createdAt: deals.createdAt,
-			updatedAt: deals.updatedAt
+			notes: contacts.notes,
+			createdAt: contacts.createdAt
 		})
-		.from(deals)
-		.leftJoin(companies, eq(deals.companyId, companies.id))
-		.leftJoin(contacts, eq(deals.contactId, contacts.id))
-		.where(eq(deals.id, params.id));
+		.from(contacts)
+		.leftJoin(companies, eq(contacts.companyId, companies.id))
+		.where(eq(contacts.id, params.id));
 
-	if (!deal) {
-		throw error(404, 'Deal not found');
+	if (!contact) {
+		throw error(404, 'Contact not found');
 	}
 
-	const dealActivities = await db
+	const contactActivities = await db
 		.select({
 			id: activities.id,
 			type: activities.type,
@@ -39,33 +35,32 @@ export const load: PageServerLoad = async ({ params }) => {
 			date: activities.date,
 			contactId: activities.contactId,
 			dealId: activities.dealId,
-			contactFirstName: contacts.firstName,
-			contactLastName: contacts.lastName
+			dealTitle: deals.title
 		})
 		.from(activities)
-		.leftJoin(contacts, eq(activities.contactId, contacts.id))
-		.where(eq(activities.dealId, params.id))
+		.leftJoin(deals, eq(activities.dealId, deals.id))
+		.where(eq(activities.contactId, params.id))
 		.orderBy(desc(activities.date));
 
-	const allContacts = await db
-		.select({ id: contacts.id, firstName: contacts.firstName, lastName: contacts.lastName })
-		.from(contacts)
-		.orderBy(contacts.lastName);
+	const allDeals = await db
+		.select({ id: deals.id, title: deals.title })
+		.from(deals)
+		.orderBy(deals.title);
 
-	return { deal, activities: dealActivities, contacts: allContacts };
+	return { contact, activities: contactActivities, deals: allDeals };
 };
 
 export const actions: Actions = {
-	createActivity: async ({ request, params }) => {
+	createActivity: async ({ request, params, locals }) => {
 		const formData = await request.formData();
 		const type = formData.get('type') as any;
 		const subject = formData.get('subject') as string;
 		const notes = formData.get('notes') as string;
 		const date = formData.get('date') as string;
-		const contactId = formData.get('contactId') as string;
+		const dealId = formData.get('dealId') as string;
 
-		if (!subject?.trim() || !contactId) {
-			return fail(400, { error: 'Subject and contact are required' });
+		if (!subject?.trim()) {
+			return fail(400, { error: 'Subject is required' });
 		}
 
 		await db.insert(activities).values({
@@ -73,8 +68,9 @@ export const actions: Actions = {
 			subject: subject.trim(),
 			notes: notes?.trim() || null,
 			date: date ? new Date(date) : new Date(),
-			contactId,
-			dealId: params.id
+			contactId: params.id,
+			dealId: dealId || null,
+			userId: locals.user?.id ?? null
 		});
 
 		return { success: true };

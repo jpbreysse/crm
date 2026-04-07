@@ -35,7 +35,7 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions: Actions = {
-	create: async ({ request }) => {
+	create: async ({ request, locals }) => {
 		const formData = await request.formData();
 		const title = formData.get('title') as string;
 		const value = formData.get('value') as string;
@@ -56,6 +56,7 @@ export const actions: Actions = {
 			expectedCloseDate: expectedCloseDate || null,
 			companyId: companyId || null,
 			contactId: contactId || null,
+			ownerId: locals.user?.id ?? null,
 			description: description?.trim() || null
 		});
 
