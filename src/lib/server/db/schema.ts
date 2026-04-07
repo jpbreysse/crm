@@ -121,6 +121,22 @@ export const deals = pgTable('deals', {
 	updatedAt: timestamp('updated_at').defaultNow().notNull()
 });
 
+export const taskStatusEnum = pgEnum('task_status', ['todo', 'done']);
+
+export const tasks = pgTable('tasks', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	title: varchar('title', { length: 255 }).notNull(),
+	description: text('description'),
+	dueDate: date('due_date'),
+	status: taskStatusEnum('status').notNull().default('todo'),
+	dealId: uuid('deal_id').references(() => deals.id),
+	contactId: uuid('contact_id').references(() => contacts.id),
+	assignedTo: text('assigned_to').references(() => users.id),
+	createdBy: text('created_by').references(() => users.id),
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at').defaultNow().notNull()
+});
+
 export const activities = pgTable('activities', {
 	id: uuid('id').primaryKey().defaultRandom(),
 	type: activityTypeEnum('type').notNull(),

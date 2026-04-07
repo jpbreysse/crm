@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
-import { deals, companies, contacts, activities } from '$lib/server/db/schema';
-import { eq, desc, and } from 'drizzle-orm';
+import { deals, companies, contacts, activities, tasks } from '$lib/server/db/schema';
+import { eq, desc, asc } from 'drizzle-orm';
 import { error, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 
@@ -36,6 +36,12 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		throw error(403, 'Access denied');
 	}
 
+	const dealTasks = await db
+		.select()
+		.from(tasks)
+		.where(eq(tasks.dealId, params.id))
+		.orderBy(asc(tasks.status), asc(tasks.dueDate));
+
 	const dealActivities = await db
 		.select({
 			id: activities.id,
@@ -58,10 +64,56 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		.from(contacts)
 		.orderBy(contacts.lastName);
 
-	return { deal, activities: dealActivities, contacts: allContacts };
+	return { deal, tasks: dealTasks, activities: dealActivities, contacts: allContacts };
 };
 
 export const actions: Actions = {
+	createTask: async ({ request, params, locals }) => {
+		const formData = await request.formData();
+		const title = formData.get('title') as string;
+		const dueDate = formData.get('dueDate') as string;
+
+		if (!title?.trim()) {
+			return fail(400, { error: 'Task title is required' });
+		}
+
+		await db.insert(tasks).values({
+			title: title.trim(),
+			dueDate: dueDate || null,
+			dealId: params.id,
+			assignedTo: locals.user?.id ?? null,
+			createdBy: locals.user?.id ?? null
+		});
+
+		return { success: true };
+	},
+
+	toggleTask: async ({ request }) => {
+		const formData = await request.formData();
+		const id = formData.get('id') as string;
+		const currentStatus = formData.get('currentStatus') as string;
+
+		if (!id) return fail(400, { error: 'Task ID is required' });
+
+		await db.update(tasks).set({
+			status: currentStatus === 'todo' ? 'done' : 'todo',
+			updatedAt: new Date()
+		}).where(eq(tasks.id, id));
+
+		return { success: true };
+	},
+
+	deleteTask: async ({ request }) => {
+		const formData = await request.formData();
+		const id = formData.get('id') as string;
+
+		if (!id) return fail(400, { error: 'Task ID is required' });
+
+		await db.delete(tasks).where(eq(tasks.id, id));
+
+		return { success: true };
+	},
+
 	createActivity: async ({ request, params, locals }) => {
 		const formData = await request.formData();
 		const type = formData.get('type') as any;

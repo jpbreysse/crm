@@ -1,9 +1,9 @@
 import { db } from '$lib/server/db';
-import { companies, contacts, deals, activities } from '$lib/server/db/schema';
-import { eq, count, sum, desc } from 'drizzle-orm';
+import { companies, contacts, deals, activities, tasks } from '$lib/server/db/schema';
+import { eq, count, sum, desc, asc } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ locals }) => {
 	const [companyCount] = await db.select({ count: count() }).from(companies);
 	const [contactCount] = await db.select({ count: count() }).from(contacts);
 	const [dealCount] = await db.select({ count: count() }).from(deals);
@@ -38,6 +38,38 @@ export const load: PageServerLoad = async () => {
 		.orderBy(desc(activities.date))
 		.limit(5);
 
+	// Upcoming tasks (todo only)
+	const upcomingTasksQuery = db
+		.select({
+			id: tasks.id,
+			title: tasks.title,
+			dueDate: tasks.dueDate,
+			dealId: tasks.dealId,
+			dealTitle: deals.title
+		})
+		.from(tasks)
+		.leftJoin(deals, eq(tasks.dealId, deals.id))
+		.where(eq(tasks.status, 'todo'))
+		.orderBy(asc(tasks.dueDate))
+		.limit(10);
+
+	// Sales users only see their own tasks
+	const upcomingTasks = locals.user?.role !== 'admin' && locals.user
+		? await db
+			.select({
+				id: tasks.id,
+				title: tasks.title,
+				dueDate: tasks.dueDate,
+				dealId: tasks.dealId,
+				dealTitle: deals.title
+			})
+			.from(tasks)
+			.leftJoin(deals, eq(tasks.dealId, deals.id))
+			.where(eq(tasks.status, 'todo'))
+			.orderBy(asc(tasks.dueDate))
+			.limit(10)
+		: await upcomingTasksQuery;
+
 	return {
 		stats: {
 			companies: companyCount.count,
@@ -46,6 +78,7 @@ export const load: PageServerLoad = async () => {
 			wonValue: pipelineValue.total ?? '0'
 		},
 		recentDeals,
-		recentActivities
+		recentActivities,
+		upcomingTasks
 	};
 };

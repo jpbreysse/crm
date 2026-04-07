@@ -13,6 +13,11 @@
 		lost: 'destructive'
 	};
 
+	function isOverdue(dueDate: string | null) {
+		if (!dueDate) return false;
+		return new Date(dueDate) < new Date(new Date().toDateString());
+	}
+
 	function formatCurrency(value: string | null) {
 		if (!value) return '$0';
 		return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(value));
@@ -48,6 +53,33 @@
 			</Card.Header>
 		</Card.Root>
 	</div>
+
+	{#if data.upcomingTasks.length > 0}
+		<Card.Root>
+			<Card.Header>
+				<Card.Title class="text-xl">Upcoming Tasks</Card.Title>
+			</Card.Header>
+			<Card.Content>
+				<div class="space-y-3">
+					{#each data.upcomingTasks as task}
+						<div class="flex items-center justify-between">
+							<div>
+								<a href="/deals/{task.dealId}" class="font-medium hover:underline">{task.title}</a>
+								{#if task.dealTitle}
+									<p class="text-sm text-muted-foreground">{task.dealTitle}</p>
+								{/if}
+							</div>
+							{#if task.dueDate}
+								<span class="text-sm {isOverdue(task.dueDate) ? 'font-semibold text-destructive' : 'text-muted-foreground'}">
+									{isOverdue(task.dueDate) ? '⚠ ' : ''}{task.dueDate}
+								</span>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			</Card.Content>
+		</Card.Root>
+	{/if}
 
 	<div class="grid gap-8 lg:grid-cols-2">
 		<Card.Root>
