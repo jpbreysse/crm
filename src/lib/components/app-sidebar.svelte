@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import { authClient } from '$lib/auth-client';
 	import { goto } from '$app/navigation';
+	import Search from '$lib/components/search.svelte';
 
 	let { user }: { user: { id: string; name: string; email: string; role: string | null } } = $props();
 
@@ -23,6 +24,7 @@
 	<div class="flex h-16 items-center border-b px-6">
 		<h1 class="text-lg font-bold">Energy CRM</h1>
 	</div>
+	<Search />
 	<nav class="flex-1 space-y-1 px-3 py-4">
 		{#each navItems as item}
 			<a
