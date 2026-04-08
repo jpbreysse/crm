@@ -108,5 +108,22 @@ export const actions: Actions = {
 		await db.delete(deals).where(eq(deals.id, id));
 
 		return { success: true };
+	},
+
+	moveStage: async ({ request }) => {
+		const formData = await request.formData();
+		const id = formData.get('id') as string;
+		const newStage = formData.get('stage') as any;
+
+		if (!id || !newStage) {
+			return fail(400, { error: 'Deal ID and stage are required' });
+		}
+
+		await db.update(deals).set({
+			stage: newStage,
+			updatedAt: new Date()
+		}).where(eq(deals.id, id));
+
+		return { success: true };
 	}
 };

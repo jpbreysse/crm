@@ -44,6 +44,16 @@
 		showForm = false;
 	}
 
+	function prevStage(stage: string): string | null {
+		const idx = stages.indexOf(stage as any);
+		return idx > 0 ? stages[idx - 1] : null;
+	}
+
+	function nextStage(stage: string): string | null {
+		const idx = stages.indexOf(stage as any);
+		return idx < stages.length - 1 ? stages[idx + 1] : null;
+	}
+
 	$effect(() => {
 		if (form?.success) {
 			showForm = false;
@@ -229,6 +239,32 @@
 								{#if deal.expectedCloseDate}
 									<p class="text-xs text-muted-foreground">Close: {deal.expectedCloseDate}</p>
 								{/if}
+								<div class="mt-3 flex items-center justify-between border-t pt-2">
+									{#if prevStage(deal.stage)}
+										<form method="POST" action="?/moveStage">
+											<input type="hidden" name="id" value={deal.id} />
+											<input type="hidden" name="stage" value={prevStage(deal.stage)} />
+											<button type="submit" class="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+												<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+												{stageLabels[prevStage(deal.stage) ?? '']}
+											</button>
+										</form>
+									{:else}
+										<span></span>
+									{/if}
+									{#if nextStage(deal.stage)}
+										<form method="POST" action="?/moveStage">
+											<input type="hidden" name="id" value={deal.id} />
+											<input type="hidden" name="stage" value={nextStage(deal.stage)} />
+											<button type="submit" class="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+												{stageLabels[nextStage(deal.stage) ?? '']}
+												<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+											</button>
+										</form>
+									{:else}
+										<span></span>
+									{/if}
+								</div>
 							</div>
 						{/each}
 						{#if dealsByStage(stage).length === 0}
