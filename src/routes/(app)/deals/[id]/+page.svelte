@@ -62,7 +62,13 @@
 		<Card.Root>
 			<Card.Header class="pb-2">
 				<Card.Description>Company</Card.Description>
-				<Card.Title class="text-2xl">{data.deal.companyName ?? '-'}</Card.Title>
+				<Card.Title class="text-2xl">
+					{#if data.deal.companyName}
+						<a href="/companies/{data.deal.companyId}" class="hover:underline">{data.deal.companyName}</a>
+					{:else}
+						-
+					{/if}
+				</Card.Title>
 			</Card.Header>
 		</Card.Root>
 		<Card.Root>

@@ -137,6 +137,15 @@ export const tasks = pgTable('tasks', {
 	updatedAt: timestamp('updated_at').defaultNow().notNull()
 });
 
+export const companyNotes = pgTable('company_notes', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	content: text('content').notNull(),
+	companyId: uuid('company_id').references(() => companies.id).notNull(),
+	createdBy: text('created_by').references(() => users.id),
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at').defaultNow().notNull()
+});
+
 export const activities = pgTable('activities', {
 	id: uuid('id').primaryKey().defaultRandom(),
 	type: activityTypeEnum('type').notNull(),

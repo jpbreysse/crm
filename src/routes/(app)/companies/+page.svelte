@@ -170,7 +170,7 @@
 					<tbody>
 						{#each data.companies as company}
 							<tr class="border-b last:border-0 hover:bg-muted/50">
-								<td class="p-4 font-medium">{company.name}</td>
+								<td class="p-4 font-medium"><a href="/companies/{company.id}" class="hover:underline">{company.name}</a></td>
 								<td class="p-4">
 									{#if company.industrySegment}
 										<Badge variant="outline">{segments[company.industrySegment] ?? company.industrySegment}</Badge>
